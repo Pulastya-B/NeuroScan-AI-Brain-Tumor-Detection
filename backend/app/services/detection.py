@@ -30,15 +30,15 @@ def run_yolo_detection(image_path: str) -> dict:
     Returns detection results including tumor type, confidence, and bounding boxes.
     """
     try:
-        # Try to import ultralytics (YOLO)
-        from ultralytics import YOLO
+        # Import YOLOv10 from THU-MIG package (installed via git+https://github.com/THU-MIG/yolov10.git)
+        from ultralytics import YOLOv10
         import cv2
         import numpy as np
 
-        logger.info(f"Loading YOLO model from {settings.MODEL_PATH}")
-        model = YOLO(settings.MODEL_PATH)
+        logger.info(f"Loading YOLOv10 model from {settings.MODEL_PATH}")
+        model = YOLOv10(settings.MODEL_PATH)
         logger.info(f"Running inference on {image_path}")
-        results = model(image_path, imgsz=640, conf=settings.CONFIDENCE_THRESHOLD)
+        results = model.predict(image_path, imgsz=640, conf=settings.CONFIDENCE_THRESHOLD)
 
         detections = []
         tumor_detected = False
