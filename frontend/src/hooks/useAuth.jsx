@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE = 'http://localhost:8000'
+// Empty base = relative URLs. Works with Vite proxy in dev & same-origin in production.
+const API_BASE = ''
 
 const api = axios.create({ baseURL: API_BASE })
 

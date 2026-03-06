@@ -83,7 +83,7 @@ export default function ScanDetail() {
                 <div className="relative bg-black">
                   {scan.result_image_path ? (
                     <img
-                      src={`http://localhost:8000/${scan.result_image_path}`}
+                      src={`/${scan.result_image_path}`}
                       alt="MRI Scan Result"
                       className="w-full object-contain max-h-72"
                     />
