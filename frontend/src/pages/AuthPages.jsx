@@ -242,7 +242,7 @@ export function RegisterPage() {
               <InputField label="Age" type="number" value={form.age} onChange={set('age')} placeholder="25" />
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Gender</label>
-                <select value={form.gender} onChange={e => set('gender')(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#6366f1]/60 transition-all">
+                <select value={form.gender} onChange={e => set('gender')(e.target.value)} className="w-full bg-gray/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#6366f1]/60 transition-all">
                   <option value="">Select</option>
                   <option>Male</option><option>Female</option><option>Other</option>
                 </select>
