@@ -18,7 +18,7 @@ const fadeUp = {
   visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: i * 0.08 } })
 }
 
-const tumorColors = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+const tumorColors = { brain_tumor: '#ef4444', eye: '#60a5fa', no_tumor: '#22c55e' }
 
 function ReportCard({ scan, index }) {
   const color = tumorColors[scan.tumor_type] || '#6366f1'

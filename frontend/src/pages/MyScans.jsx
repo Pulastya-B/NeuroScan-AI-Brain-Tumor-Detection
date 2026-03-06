@@ -26,7 +26,7 @@ const statusTabs = [
   { key: 'clear', label: 'Clear' },
 ]
 
-const tumorColors = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+const tumorColors = { brain_tumor: '#ef4444', eye: '#60a5fa', no_tumor: '#22c55e' }
 
 export default function MyScans() {
   const [scans, setScans] = useState([])

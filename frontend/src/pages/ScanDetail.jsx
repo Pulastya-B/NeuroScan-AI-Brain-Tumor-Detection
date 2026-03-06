@@ -22,7 +22,7 @@ const patientNav = [
   { to: '/patient/reports', label: 'Reports', icon: FileText },
 ]
 
-const tumorColorMap = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+const tumorColorMap = { brain_tumor: '#ef4444', eye: '#60a5fa', no_tumor: '#22c55e' }
 
 function BoundingBoxOverlay({ boxes, imageRef }) {
   const [dims, setDims] = useState({ w: 0, h: 0, natW: 1, natH: 1 })
@@ -119,7 +119,7 @@ export default function ScanDetail() {
     finally { setSaving(false) }
   }
 
-  const tumorColors = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+  const tumorColors = { brain_tumor: '#ef4444', eye: '#60a5fa', no_tumor: '#22c55e' }
   const tumorColor = scan?.tumor_type ? tumorColors[scan.tumor_type] || '#6366f1' : '#6366f1'
 
   return (

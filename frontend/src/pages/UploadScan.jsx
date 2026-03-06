@@ -19,11 +19,9 @@ const fadeUp = {
   visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: i * 0.08 } })
 }
 
-const tumorColors = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+const tumorColors = { brain_tumor: '#ef4444', eye: '#60a5fa', no_tumor: '#22c55e' }
 const tumorDescriptions = {
-  glioma: 'Gliomas arise from glial cells in the brain. They can range from low-grade (slow-growing) to high-grade (aggressive). Treatment typically involves surgery, radiation, and/or chemotherapy.',
-  meningioma: 'Meningiomas develop from the meninges — the membranes surrounding the brain and spinal cord. Most are benign and slow-growing. Small, asymptomatic meningiomas may only need monitoring.',
-  pituitary: 'Pituitary tumors arise from the pituitary gland at the base of the brain. Most are benign adenomas. They may cause hormonal imbalances and can often be treated with medication or surgery.',
+  brain_tumor: 'A brain tumor has been detected in this MRI scan. Brain tumors can range from benign to malignant. Please consult your neurologist or neurosurgeon immediately for further evaluation, which may include additional imaging and biopsy.',
   no_tumor: 'No abnormal masses or tumors were detected in this MRI scan. The brain tissue appears normal based on the AI analysis. Regular checkups are recommended.',
 }
 

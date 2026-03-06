@@ -45,12 +45,10 @@ def run_yolo_detection(image_path: str) -> dict:
         tumor_type = "no_tumor"
         confidence = 0.0
 
-        # Class names mapping (adjust based on your model's classes)
+        # Class names mapping — best2.pt has 2 classes: Brain-Tumor and eye
         class_names = {
-            0: "glioma",
-            1: "meningioma", 
-            2: "no_tumor",
-            3: "pituitary"
+            0: "brain_tumor",
+            1: "eye",
         }
 
         for result in results:
@@ -69,9 +67,10 @@ def run_yolo_detection(image_path: str) -> dict:
                         "bbox": bbox
                     })
 
-                    if detected_class != "no_tumor" and conf > confidence:
+                    # Only count brain_tumor as a positive detection (ignore eye)
+                    if detected_class == "brain_tumor" and conf > confidence:
                         tumor_detected = True
-                        tumor_type = detected_class
+                        tumor_type = "brain_tumor"
                         confidence = conf
 
         # Save annotated result image
