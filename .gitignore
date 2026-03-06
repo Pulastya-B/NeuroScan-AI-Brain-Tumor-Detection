@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.env.local
+*.db
+
+# Node
+node_modules/
+frontend/dist/
+
+# Uploads (runtime data)
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Root-level GLB duplicates
+/brain.glb
+/mvadapter_model_texture_mesh_fe4f35e67e24a5ff.glb.glb
