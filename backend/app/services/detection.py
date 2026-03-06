@@ -37,6 +37,11 @@ def run_yolo_detection(image_path: str) -> dict:
 
         logger.info(f"Loading YOLOv10 model from {settings.MODEL_PATH}")
         model = YOLOv10(settings.MODEL_PATH)
+        
+        # Read class names directly from the model — no more hardcoding
+        model_class_names = model.names  # e.g. {0: 'Brain-Tumor', 1: 'eye'}
+        logger.info(f"Model classes: {model_class_names}")
+        
         logger.info(f"Running inference on {image_path}")
         results = model.predict(image_path, imgsz=640, conf=settings.CONFIDENCE_THRESHOLD)
 
@@ -45,11 +50,9 @@ def run_yolo_detection(image_path: str) -> dict:
         tumor_type = "no_tumor"
         confidence = 0.0
 
-        # Class names mapping — best2.pt has 2 classes: Brain-Tumor and eye
-        class_names = {
-            0: "brain_tumor",
-            1: "eye",
-        }
+        # Normalise class names: lowercase, replace spaces/hyphens with underscore
+        def norm(name):
+            return name.lower().replace("-", "_").replace(" ", "_")
 
         for result in results:
             boxes = result.boxes
@@ -59,7 +62,8 @@ def run_yolo_detection(image_path: str) -> dict:
                     conf = float(box.conf[0])
                     bbox = box.xyxy[0].tolist()
                     
-                    detected_class = class_names.get(cls_id, "unknown")
+                    raw_name = model_class_names.get(cls_id, "unknown")
+                    detected_class = norm(raw_name)
                     
                     detections.append({
                         "class": detected_class,
@@ -67,10 +71,10 @@ def run_yolo_detection(image_path: str) -> dict:
                         "bbox": bbox
                     })
 
-                    # Only count brain_tumor as a positive detection (ignore eye)
-                    if detected_class == "brain_tumor" and conf > confidence:
+                    # Any class containing "tumor" is a positive detection
+                    if "tumor" in detected_class and conf > confidence:
                         tumor_detected = True
-                        tumor_type = "brain_tumor"
+                        tumor_type = detected_class
                         confidence = conf
 
         # Save annotated result image
