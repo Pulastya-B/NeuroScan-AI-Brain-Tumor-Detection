@@ -1,9 +1,28 @@
 import os
 import uuid
 import shutil
+import logging
 from pathlib import Path
 from typing import Optional, Tuple
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+def _patch_torch_load():
+    """Patch torch.load for compatibility with YOLOv10 custom weights on PyTorch 2.6+."""
+    try:
+        import torch
+        _original_load = torch.load
+        def _patched_load(*args, **kwargs):
+            kwargs.setdefault('weights_only', False)
+            return _original_load(*args, **kwargs)
+        torch.load = _patched_load
+        logger.info("Patched torch.load with weights_only=False for YOLOv10 compat")
+    except Exception as e:
+        logger.warning(f"Could not patch torch.load: {e}")
+
+# Apply patch once at import time
+_patch_torch_load()
 
 def run_yolo_detection(image_path: str) -> dict:
     """
@@ -16,8 +35,9 @@ def run_yolo_detection(image_path: str) -> dict:
         import cv2
         import numpy as np
 
-        # Load model - ultralytics YOLO class auto-detects architecture (v5/v8/v10)
+        logger.info(f"Loading YOLO model from {settings.MODEL_PATH}")
         model = YOLO(settings.MODEL_PATH)
+        logger.info(f"Running inference on {image_path}")
         results = model(image_path, imgsz=640, conf=settings.CONFIDENCE_THRESHOLD)
 
         detections = []
@@ -73,10 +93,11 @@ def run_yolo_detection(image_path: str) -> dict:
             "result_image_path": result_path if os.path.exists(result_path) else None
         }
 
-    except ImportError:
-        # YOLO not installed - return mock result for development
+    except ImportError as e:
+        logger.warning(f"YOLO/ultralytics not installed, using mock detection: {e}")
         return _mock_detection(image_path)
     except Exception as e:
+        logger.error(f"YOLO detection failed: {e}", exc_info=True)
         return {
             "success": False,
             "error": str(e),

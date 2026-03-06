@@ -1,9 +1,12 @@
 import os
 import uuid
+import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from app.core.database import get_db
 from app.core.security import get_current_user, get_current_doctor
@@ -25,7 +28,10 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
     """Background task to run YOLO detection."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    engine = create_engine(db_url)
+    connect_args = {}
+    if db_url.startswith("sqlite"):
+        connect_args["check_same_thread"] = False
+    engine = create_engine(db_url, connect_args=connect_args)
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     
@@ -37,7 +43,9 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
         scan.status = "processing"
         db.commit()
 
+        logger.info(f"Starting YOLO detection for scan {scan_id}, image: {image_path}")
         result = run_yolo_detection(image_path)
+        logger.info(f"Detection result for scan {scan_id}: success={result.get('success')}, tumor={result.get('tumor_type')}, error={result.get('error', 'none')}")
 
         scan.status = "completed" if result["success"] else "failed"
         scan.tumor_detected = result.get("tumor_detected")
@@ -71,6 +79,7 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
         
         db.commit()
     except Exception as e:
+        logger.error(f"Background scan processing failed for scan {scan_id}: {e}", exc_info=True)
         try:
             scan = db.query(Scan).filter(Scan.id == scan_id).first()
             if scan:
