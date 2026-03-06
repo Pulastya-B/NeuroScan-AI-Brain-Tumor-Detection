@@ -116,7 +116,7 @@ def _mock_detection(image_path: str) -> dict:
     import random
     import shutil
     
-    tumor_types = ["glioma", "meningioma", "pituitary", "no_tumor"]
+    tumor_types = ["brain_tumor", "no_tumor"]
     detected_type = random.choice(tumor_types)
     tumor_detected = detected_type != "no_tumor"
     confidence = random.uniform(0.72, 0.98) if tumor_detected else random.uniform(0.85, 0.99)
