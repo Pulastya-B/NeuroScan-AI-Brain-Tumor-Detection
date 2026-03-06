@@ -10,9 +10,9 @@ RUN npm run build
 # ---- Stage 2: Python backend + serve frontend ----
 FROM python:3.11-slim
 
-# System deps for OpenCV, ultralytics
+# System deps for OpenCV, ultralytics, and git (needed to pip install from GitHub)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 \
+    libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
