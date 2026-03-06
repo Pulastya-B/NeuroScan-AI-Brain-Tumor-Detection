@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Brain, AlertTriangle, CheckCircle, Clock, User, Stethoscope, Save, Download } from 'lucide-react'
+import { ArrowLeft, Brain, AlertTriangle, CheckCircle, Clock, User, Stethoscope, Save, Download, Maximize2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import DashboardLayout from '../components/shared/DashboardLayout'
 import { useAuth, api } from '../hooks/useAuth'
@@ -22,6 +22,66 @@ const patientNav = [
   { to: '/patient/reports', label: 'Reports', icon: FileText },
 ]
 
+const tumorColorMap = { glioma: '#ef4444', meningioma: '#f97316', pituitary: '#eab308', no_tumor: '#22c55e' }
+
+function BoundingBoxOverlay({ boxes, imageRef }) {
+  const [dims, setDims] = useState({ w: 0, h: 0, natW: 1, natH: 1 })
+
+  useEffect(() => {
+    const img = imageRef.current
+    if (!img) return
+    const update = () => {
+      setDims({
+        w: img.clientWidth,
+        h: img.clientHeight,
+        natW: img.naturalWidth || 1,
+        natH: img.naturalHeight || 1,
+      })
+    }
+    update()
+    img.addEventListener('load', update)
+    const ro = new ResizeObserver(update)
+    ro.observe(img)
+    return () => { img.removeEventListener('load', update); ro.disconnect() }
+  }, [imageRef])
+
+  if (!boxes?.length || dims.w === 0) return null
+
+  const scaleX = dims.w / dims.natW
+  const scaleY = dims.h / dims.natH
+
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
+      {boxes.map((box, i) => {
+        const [x1, y1, x2, y2] = box.bbox
+        const color = tumorColorMap[box.class] || '#6366f1'
+        return (
+          <g key={i}>
+            <rect
+              x={x1 * scaleX} y={y1 * scaleY}
+              width={(x2 - x1) * scaleX} height={(y2 - y1) * scaleY}
+              fill="none" stroke={color} strokeWidth={2.5}
+              strokeDasharray="6 3" rx={4}
+            />
+            <rect
+              x={x1 * scaleX} y={y1 * scaleY - 22}
+              width={Math.max(80, (box.class?.length || 6) * 8 + 50)}
+              height={20} rx={4}
+              fill={color} opacity={0.9}
+            />
+            <text
+              x={x1 * scaleX + 6} y={y1 * scaleY - 7}
+              fill="white" fontSize={11} fontWeight={600} fontFamily="monospace"
+            >
+              {box.class?.replace('_', ' ')} {(box.confidence * 100).toFixed(0)}%
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 export default function ScanDetail() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -31,6 +91,8 @@ export default function ScanDetail() {
   const [notes, setNotes] = useState('')
   const [diagnosis, setDiagnosis] = useState('')
   const [saving, setSaving] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const resultImgRef = useRef(null)
 
   const isDoctor = user?.role === 'doctor'
   const navItems = isDoctor ? doctorNav : patientNav
@@ -82,11 +144,17 @@ export default function ScanDetail() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-strong rounded-2xl overflow-hidden">
                 <div className="relative bg-black">
                   {scan.result_image_path ? (
-                    <img
-                      src={`/${scan.result_image_path}`}
-                      alt="MRI Scan Result"
-                      className="w-full object-contain max-h-72"
-                    />
+                    <div className="relative">
+                      <img
+                        ref={resultImgRef}
+                        src={`/${scan.result_image_path}`}
+                        alt="MRI Scan Result"
+                        className="w-full object-contain max-h-72"
+                      />
+                      {scan.bounding_boxes?.length > 0 && (
+                        <BoundingBoxOverlay boxes={scan.bounding_boxes} imageRef={resultImgRef} />
+                      )}
+                    </div>
                   ) : (
                     <div className="w-full h-64 flex items-center justify-center">
                       <div className="text-center text-neutral-600">
@@ -109,7 +177,14 @@ export default function ScanDetail() {
                 </div>
                 <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
                   <span className="text-xs text-neutral-500 font-mono">{scan.original_filename}</span>
-                  <span className="text-xs text-neutral-500">{format(new Date(scan.created_at), 'MMM d, yyyy')}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-neutral-500">{format(new Date(scan.created_at), 'MMM d, yyyy')}</span>
+                    {scan.result_image_path && (
+                      <button onClick={() => setFullscreen(true)} className="p-1 rounded-lg hover:bg-white/5 transition-colors" title="View fullscreen">
+                        <Maximize2 className="w-3.5 h-3.5 text-neutral-500" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
 
@@ -270,6 +345,25 @@ export default function ScanDetail() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen overlay */}
+      {fullscreen && scan?.result_image_path && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setFullscreen(false)}
+        >
+          <button onClick={() => setFullscreen(false)}
+            className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={`/${scan.result_image_path}`}
+            alt="Detection result fullscreen"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      )}
     </DashboardLayout>
   )
 }

@@ -16,8 +16,9 @@ def run_yolo_detection(image_path: str) -> dict:
         import cv2
         import numpy as np
 
+        # Load model - ultralytics YOLO class auto-detects architecture (v5/v8/v10)
         model = YOLO(settings.MODEL_PATH)
-        results = model(image_path, conf=settings.CONFIDENCE_THRESHOLD)
+        results = model(image_path, imgsz=640, conf=settings.CONFIDENCE_THRESHOLD)
 
         detections = []
         tumor_detected = False

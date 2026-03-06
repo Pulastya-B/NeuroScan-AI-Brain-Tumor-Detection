@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # YOLO Model
     MODEL_PATH: str = "model.pt"
-    CONFIDENCE_THRESHOLD: float = 0.5
+    CONFIDENCE_THRESHOLD: float = 0.25
     
     # File Upload
     UPLOAD_DIR: str = "uploads"

@@ -4,6 +4,9 @@ import LandingPage from './pages/LandingPage'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import DoctorDashboard from './pages/DoctorDashboard'
 import PatientDashboard from './pages/PatientDashboard'
+import MyScans from './pages/MyScans'
+import UploadScan from './pages/UploadScan'
+import Reports from './pages/Reports'
 import ScanDetail from './pages/ScanDetail'
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -32,9 +35,9 @@ function AppRoutes() {
       <Route path="/doctor/upload" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
       <Route path="/patient" element={<ProtectedRoute allowedRole="patient"><PatientDashboard /></ProtectedRoute>} />
       <Route path="/patient/scans/:id" element={<ProtectedRoute allowedRole="patient"><ScanDetail /></ProtectedRoute>} />
-      <Route path="/patient/scans" element={<ProtectedRoute allowedRole="patient"><PatientDashboard /></ProtectedRoute>} />
-      <Route path="/patient/upload" element={<ProtectedRoute allowedRole="patient"><PatientDashboard /></ProtectedRoute>} />
-      <Route path="/patient/reports" element={<ProtectedRoute allowedRole="patient"><PatientDashboard /></ProtectedRoute>} />
+      <Route path="/patient/scans" element={<ProtectedRoute allowedRole="patient"><MyScans /></ProtectedRoute>} />
+      <Route path="/patient/upload" element={<ProtectedRoute allowedRole="patient"><UploadScan /></ProtectedRoute>} />
+      <Route path="/patient/reports" element={<ProtectedRoute allowedRole="patient"><Reports /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
