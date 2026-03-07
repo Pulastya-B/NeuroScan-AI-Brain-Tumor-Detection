@@ -8,6 +8,7 @@ import MyScans from './pages/MyScans'
 import UploadScan from './pages/UploadScan'
 import Reports from './pages/Reports'
 import ScanDetail from './pages/ScanDetail'
+import Analytics from './pages/Analytics'
 import ChatBot from './components/ChatBot'
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -31,6 +32,7 @@ function AppRoutes() {
       <Route path="/register" element={user ? <Navigate to={user.role === 'doctor' ? '/doctor' : '/patient'} /> : <RegisterPage />} />
       <Route path="/doctor" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
       <Route path="/doctor/scans/:id" element={<ProtectedRoute allowedRole="doctor"><ScanDetail /></ProtectedRoute>} />
+      <Route path="/doctor/analytics" element={<ProtectedRoute allowedRole="doctor"><Analytics /></ProtectedRoute>} />
       <Route path="/doctor/scans" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
       <Route path="/doctor/patients" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
       <Route path="/doctor/upload" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />

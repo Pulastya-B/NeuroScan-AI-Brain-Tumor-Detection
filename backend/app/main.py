@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -37,6 +38,10 @@ app.include_router(doctors.router, prefix="/api/doctors", tags=["Doctors"])
 app.include_router(scans.router, prefix="/api/scans", tags=["Scans"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+
+@app.on_event("startup")
+async def startup():
+    app.state.event_loop = asyncio.get_running_loop()
 
 # ---------- Serve built React frontend ----------
 # The Dockerfile builds the frontend into /app/static

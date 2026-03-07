@@ -19,6 +19,7 @@ class ScanResponse(BaseModel):
     bounding_boxes: Optional[Any] = None
     doctor_notes: Optional[str] = None
     doctor_diagnosis: Optional[str] = None
+    doctor_severity: Optional[str] = None
     is_reviewed: bool
     reviewed_at: Optional[datetime] = None
     report_path: Optional[str] = None
@@ -33,6 +34,7 @@ class ScanResponse(BaseModel):
 class DoctorReview(BaseModel):
     doctor_notes: str
     doctor_diagnosis: str
+    doctor_severity: Optional[str] = None
 
 class ScanStats(BaseModel):
     total_scans: int

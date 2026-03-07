@@ -26,6 +26,7 @@ class Scan(Base):
     # Doctor review
     doctor_notes = Column(Text, nullable=True)
     doctor_diagnosis = Column(Text, nullable=True)
+    doctor_severity = Column(String, nullable=True)  # urgent | routine | follow_up
     is_reviewed = Column(Boolean, default=False)
     reviewed_at = Column(DateTime, nullable=True)
 

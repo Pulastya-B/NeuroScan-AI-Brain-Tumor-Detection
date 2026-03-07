@@ -12,6 +12,7 @@ const navItems = [
   { to: '/doctor', label: 'Dashboard', icon: Home },
   { to: '/doctor/scans', label: 'All Scans', icon: ScanLine },
   { to: '/doctor/patients', label: 'Patients', icon: Users },
+  { to: '/doctor/analytics', label: 'Analytics', icon: Activity },
   { to: '/doctor/upload', label: 'Upload Scan', icon: Upload },
 ]
 
@@ -57,12 +58,15 @@ export default function DoctorDashboard() {
     }).catch(console.error).finally(() => setLoading(false))
   }, [])
 
-  const tumorDistribution = [
-    { name: 'Glioma', value: recentScans.filter(s => s.tumor_type === 'glioma').length },
-    { name: 'Meningioma', value: recentScans.filter(s => s.tumor_type === 'meningioma').length },
-    { name: 'Pituitary', value: recentScans.filter(s => s.tumor_type === 'pituitary').length },
-    { name: 'No Tumor', value: recentScans.filter(s => s.tumor_type === 'no_tumor').length },
-  ].filter(d => d.value > 0)
+  const tumorDistribution = Object.entries(
+    recentScans.reduce((acc, s) => {
+      if (s.tumor_type) {
+        const label = s.tumor_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        acc[label] = (acc[label] || 0) + 1
+      }
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value }))
 
   const statusBadge = (status) => {
     const map = {

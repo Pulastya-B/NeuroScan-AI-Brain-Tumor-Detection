@@ -1,7 +1,8 @@
 import os
 import uuid
+import asyncio
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -16,6 +17,7 @@ from app.models.notification import Notification
 from app.schemas.scan import ScanResponse, DoctorReview, ScanStats
 from app.services.detection import run_yolo_detection, save_upload_file
 from app.core.config import settings
+from app.api.ws import ws_manager
 
 router = APIRouter()
 
@@ -24,7 +26,7 @@ ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "dcm"}
 def get_extension(filename: str) -> str:
     return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-def process_scan_background(scan_id: int, image_path: str, db_url: str):
+def process_scan_background(scan_id: int, image_path: str, db_url: str, event_loop=None):
     """Background task to run YOLO detection."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -42,6 +44,8 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
         
         scan.status = "processing"
         db.commit()
+        if event_loop:
+            ws_manager.notify_from_thread(scan_id, {"scan_id": scan_id, "status": "processing"}, event_loop)
 
         logger.info(f"Starting YOLO detection for scan {scan_id}, image: {image_path}")
         result = run_yolo_detection(image_path)
@@ -54,6 +58,14 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
         scan.bounding_boxes = result.get("bounding_boxes")
         scan.result_image_path = result.get("result_image_path")
         db.commit()
+        if event_loop:
+            ws_manager.notify_from_thread(scan_id, {
+                "scan_id": scan_id,
+                "status": scan.status,
+                "tumor_detected": scan.tumor_detected,
+                "tumor_type": scan.tumor_type,
+                "confidence": scan.confidence,
+            }, event_loop)
 
         # Notify patient
         tumor_detected = result.get("tumor_detected", False)
@@ -92,6 +104,7 @@ def process_scan_background(scan_id: int, image_path: str, db_url: str):
 
 @router.post("/upload", response_model=ScanResponse)
 async def upload_scan(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doctor_id: Optional[int] = None,
@@ -127,7 +140,8 @@ async def upload_scan(
         process_scan_background,
         scan.id,
         upload_path,
-        settings.DATABASE_URL
+        settings.DATABASE_URL,
+        getattr(request.app.state, 'event_loop', None)
     )
 
     return _enrich_scan(scan, db)
@@ -170,6 +184,59 @@ def get_stats(
         reviewed=sum(1 for s in scans if s.is_reviewed)
     )
 
+@router.get("/analytics")
+def get_analytics(
+    current_user: User = Depends(get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """Detailed analytics for doctors — weekly trends, detection rates, type breakdown."""
+    from datetime import timedelta
+    all_scans = db.query(Scan).order_by(Scan.created_at.asc()).all()
+    now = datetime.utcnow()
+
+    # Last 8 weeks of scan activity
+    weekly_data = []
+    for i in range(7, -1, -1):
+        week_start = now - timedelta(weeks=i + 1)
+        week_end = now - timedelta(weeks=i)
+        week_scans = [s for s in all_scans if week_start <= s.created_at < week_end]
+        weekly_data.append({
+            "week": week_start.strftime("%b %d"),
+            "scans": len(week_scans),
+            "tumors": sum(1 for s in week_scans if s.tumor_detected),
+        })
+
+    # Tumor type distribution
+    type_counts: dict = {}
+    for s in all_scans:
+        if s.tumor_type:
+            label = s.tumor_type.replace("_", " ").title()
+            type_counts[label] = type_counts.get(label, 0) + 1
+    type_distribution = [{"name": k, "value": v} for k, v in type_counts.items()]
+
+    # Aggregate stats
+    completed = [s for s in all_scans if s.status == "completed"]
+    total_completed = len(completed)
+    positive = [s for s in completed if s.tumor_detected]
+    detection_rate = round(len(positive) / total_completed * 100, 1) if total_completed else 0.0
+    conf_values = [s.confidence for s in completed if s.confidence is not None]
+    avg_confidence = round(sum(conf_values) / len(conf_values) * 100, 1) if conf_values else 0.0
+    reviewed = [s for s in completed if s.is_reviewed]
+    review_rate = round(len(reviewed) / total_completed * 100, 1) if total_completed else 0.0
+    total_patients = db.query(User).filter(User.role == "patient").count()
+
+    return {
+        "weekly_scans": weekly_data,
+        "type_distribution": type_distribution,
+        "detection_rate": detection_rate,
+        "avg_confidence": avg_confidence,
+        "review_rate": review_rate,
+        "total_patients": total_patients,
+        "total_scans": len(all_scans),
+        "total_positive": len(positive),
+    }
+
+
 @router.get("/{scan_id}", response_model=ScanResponse)
 def get_scan(
     scan_id: int,
@@ -197,6 +264,7 @@ def review_scan(
     scan.doctor_id = current_user.id
     scan.doctor_notes = review.doctor_notes
     scan.doctor_diagnosis = review.doctor_diagnosis
+    scan.doctor_severity = review.doctor_severity
     scan.is_reviewed = True
     scan.reviewed_at = datetime.utcnow()
     db.commit()
@@ -213,6 +281,35 @@ def review_scan(
     db.commit()
     db.refresh(scan)
     return _enrich_scan(scan, db)
+
+@router.websocket("/{scan_id}/ws")
+async def scan_status_websocket(scan_id: int, websocket: WebSocket, db: Session = Depends(get_db)):
+    """Real-time scan status updates via WebSocket."""
+    await ws_manager.connect(scan_id, websocket)
+    try:
+        # Push current state immediately on connect
+        scan = db.query(Scan).filter(Scan.id == scan_id).first()
+        if scan:
+            await websocket.send_json({
+                "scan_id": scan_id,
+                "status": scan.status,
+                "tumor_detected": scan.tumor_detected,
+                "tumor_type": scan.tumor_type,
+                "confidence": scan.confidence,
+            })
+        # Keep alive — ping every 25s, exit on client disconnect
+        while True:
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=25.0)
+            except asyncio.TimeoutError:
+                await websocket.send_json({"ping": True})
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        ws_manager.disconnect(scan_id, websocket)
+
 
 def _enrich_scan(scan: Scan, db: Session) -> dict:
     data = {c.name: getattr(scan, c.name) for c in scan.__table__.columns}

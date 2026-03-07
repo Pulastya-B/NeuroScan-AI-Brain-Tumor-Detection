@@ -93,10 +93,14 @@ export default function UploadScan() {
   const resultImgRef = useRef(null)
   const originalImgRef = useRef(null)
   const pollTimer = useRef(null)
+  const wsRef = useRef(null)
 
   useEffect(() => {
     api.get('/api/doctors/').then(r => setDoctors(r.data)).catch(() => {})
-    return () => { if (pollTimer.current) clearInterval(pollTimer.current) }
+    return () => {
+      if (pollTimer.current) clearInterval(pollTimer.current)
+      if (wsRef.current) wsRef.current.close()
+    }
   }, [])
 
   const pollScanResult = useCallback((scanId) => {
@@ -126,6 +130,41 @@ export default function UploadScan() {
     }, 2000)
   }, [])
 
+  // WebSocket-based real-time status — falls back to polling on error
+  const connectScanWebSocket = useCallback((scanId) => {
+    setPolling(true)
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const ws = new WebSocket(`${protocol}//${window.location.host}/api/scans/${scanId}/ws`)
+      wsRef.current = ws
+
+      ws.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.ping) return
+          if (data.status === 'completed' || data.status === 'failed') {
+            ws.close()
+            const res = await api.get(`/api/scans/${scanId}`)
+            setResult(res.data)
+            setPolling(false)
+            if (data.status === 'completed') {
+              toast.success(res.data.tumor_detected ? 'Analysis complete — tumor detected' : 'Analysis complete — no tumor found')
+            } else {
+              toast.error('Analysis failed. Please try again.')
+            }
+          } else if (data.status) {
+            setResult(prev => prev ? { ...prev, status: data.status } : prev)
+          }
+        } catch { /* ignore malformed frames */ }
+      }
+
+      ws.onerror = () => { ws.close(); pollScanResult(scanId) }
+      ws.onclose = () => { wsRef.current = null }
+    } catch {
+      pollScanResult(scanId)
+    }
+  }, [pollScanResult])
+
   const onDrop = useCallback(async (files) => {
     if (!files.length) return
     setUploading(true)
@@ -142,7 +181,7 @@ export default function UploadScan() {
         setResult(scan)
       } else {
         setResult(scan)
-        pollScanResult(scan.id)
+        connectScanWebSocket(scan.id)
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Upload failed')
@@ -159,6 +198,7 @@ export default function UploadScan() {
     setResult(null)
     setPolling(false)
     if (pollTimer.current) clearInterval(pollTimer.current)
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
   }
 
   const tumorColor = result?.tumor_type ? tumorColors[result.tumor_type] || '#6366f1' : '#6366f1'

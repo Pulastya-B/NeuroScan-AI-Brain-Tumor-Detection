@@ -91,6 +91,7 @@ export default function ScanDetail() {
   const [notes, setNotes] = useState('')
   const [diagnosis, setDiagnosis] = useState('')
   const [saving, setSaving] = useState(false)
+  const [severity, setSeverity] = useState('')
   const [fullscreen, setFullscreen] = useState(false)
   const resultImgRef = useRef(null)
 
@@ -102,6 +103,7 @@ export default function ScanDetail() {
       setScan(r.data)
       setNotes(r.data.doctor_notes || '')
       setDiagnosis(r.data.doctor_diagnosis || '')
+      setSeverity(r.data.doctor_severity || '')
     }).catch(() => toast.error('Scan not found')).finally(() => setLoading(false))
   }, [id])
 
@@ -112,7 +114,7 @@ export default function ScanDetail() {
     }
     setSaving(true)
     try {
-      const res = await api.put(`/api/scans/${id}/review`, { doctor_notes: notes, doctor_diagnosis: diagnosis })
+      const res = await api.put(`/api/scans/${id}/review`, { doctor_notes: notes, doctor_diagnosis: diagnosis, doctor_severity: severity })
       setScan(res.data)
       toast.success('Review saved and patient notified!')
     } catch { toast.error('Failed to save review') }
@@ -275,6 +277,26 @@ export default function ScanDetail() {
                 {isDoctor ? (
                   <div className="space-y-4">
                     <div>
+                      <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Urgency Level</label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'urgent', label: 'Urgent', color: '#ef4444' },
+                          { value: 'routine', label: 'Routine', color: '#22c55e' },
+                          { value: 'follow_up', label: 'Follow-up', color: '#f59e0b' },
+                        ].map(opt => (
+                          <button key={opt.value} type="button" onClick={() => setSeverity(opt.value)}
+                            className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all border"
+                            style={severity === opt.value
+                              ? { background: `${opt.color}20`, border: `1px solid ${opt.color}50`, color: opt.color }
+                              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }
+                            }
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
                       <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Clinical Notes</label>
                       <textarea
                         value={notes} onChange={e => setNotes(e.target.value)} rows={4}
@@ -313,8 +335,19 @@ export default function ScanDetail() {
                         </div>
                         {scan.reviewed_at && (
                           <div className="text-xs text-neutral-500">Reviewed {format(new Date(scan.reviewed_at), 'MMM d, yyyy · h:mm a')}</div>
-                        )}
-                      </>
+                        )}                        {scan.doctor_severity && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                              scan.doctor_severity === 'urgent'
+                                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                : scan.doctor_severity === 'follow_up'
+                                  ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                  : 'bg-green-500/20 text-green-400 border-green-500/30'
+                            }`}>
+                              {scan.doctor_severity.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Priority
+                            </span>
+                          </div>
+                        )}                      </>
                     ) : (
                       <div className="text-sm text-neutral-500 text-center py-6">
                         <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
