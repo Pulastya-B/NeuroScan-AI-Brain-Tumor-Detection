@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 import os
 from pathlib import Path
 
-from app.api import auth, patients, scans, notifications, doctors
+from app.api import auth, patients, scans, notifications, doctors, chat
 from app.core.database import engine
 from app.models import base
 
@@ -36,6 +36,7 @@ app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
 app.include_router(doctors.router, prefix="/api/doctors", tags=["Doctors"])
 app.include_router(scans.router, prefix="/api/scans", tags=["Scans"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 
 # ---------- Serve built React frontend ----------
 # The Dockerfile builds the frontend into /app/static

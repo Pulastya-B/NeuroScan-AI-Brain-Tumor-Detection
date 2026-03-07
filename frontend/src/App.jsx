@@ -8,6 +8,7 @@ import MyScans from './pages/MyScans'
 import UploadScan from './pages/UploadScan'
 import Reports from './pages/Reports'
 import ScanDetail from './pages/ScanDetail'
+import ChatBot from './components/ChatBot'
 
 function ProtectedRoute({ children, allowedRole }) {
   const { user, loading } = useAuth()
@@ -47,6 +48,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <ChatBot />
     </AuthProvider>
   )
 }

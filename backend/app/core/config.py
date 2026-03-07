@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: list = ["jpg", "jpeg", "png", "dcm"]
     
+    # Mistral AI Chat
+    MISTRAL_API_KEY: str = ""
+
     # App
     APP_NAME: str = "NeuroScan AI"
     DEBUG: bool = True
