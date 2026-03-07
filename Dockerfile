@@ -34,6 +34,13 @@ COPY --from=frontend-build /frontend/dist ./static
 RUN mkdir -p uploads && chmod 777 uploads
 RUN chmod 777 /app
 
+# Prevent huggingface_hub / ultralytics from making outbound network calls at startup.
+# Without these, the container fails with "curl: (6) Could not resolve host: huggingface.co"
+# during the HF Spaces init step.
+ENV HF_HUB_OFFLINE=1
+ENV HF_HUB_DISABLE_TELEMETRY=1
+ENV YOLO_VERBOSE=False
+
 # Expose the port HF Spaces expects
 EXPOSE 7860
 
