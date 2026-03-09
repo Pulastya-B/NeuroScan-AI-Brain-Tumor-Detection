@@ -8,212 +8,185 @@ app_port: 7860
 pinned: false
 ---
 
-# 🧠 NeuroScan AI — Brain Tumor Detection Platform
+# NeuroScan AI — Brain Tumor Detection Platform
 
-A full-stack web application for AI-powered brain tumor detection built for a Minor Project.  
-Upgrades a simple Gradio demo into a production-ready clinical platform with role-based auth, 3D landing page, doctor/patient dashboards, real-time notifications, and YOLO-powered detection.
+A full-stack clinical web platform for AI-powered brain MRI analysis. Built as a Minor Project, it provides role-based portals for doctors and patients, real-time scan processing via YOLOv10, and a 3D interactive landing page.
+
+**Live demo:** [huggingface.co/spaces/Pulasty/Brain-Tumor-Detection](https://huggingface.co/spaces/Pulasty/Brain-Tumor-Detection)
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | React + Vite + Tailwind CSS |
-| 3D Graphics | Three.js + React Three Fiber |
-| Animations | Framer Motion |
-| Backend | FastAPI (Python) |
-| Database | PostgreSQL + SQLAlchemy |
-| Auth | JWT (python-jose + bcrypt) |
-| AI Model | YOLOv8 (Ultralytics) |
+|---|---|
+| Frontend | React 18, Vite 5, Tailwind CSS 3 |
+| 3D / Animation | Three.js, React Three Fiber, Framer Motion |
 | Charts | Recharts |
+| Backend | FastAPI, SQLAlchemy 2, SQLite |
+| Auth | JWT (python-jose + bcrypt) |
+| AI Model | YOLOv10 (Ultralytics fork, THU-MIG) |
+| AI Chatbot | Mistral AI |
+| Deployment | Docker on Hugging Face Spaces |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 brain-tumor-detection/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # Route handlers
-│   │   │   ├── auth.py    # Register, login, /me
-│   │   │   ├── scans.py   # Upload, detect, review
-│   │   │   ├── patients.py
+│   │   ├── api/
+│   │   │   ├── auth.py           # Register, login, /me
+│   │   │   ├── scans.py          # Upload, detect, review, analytics, WebSocket
+│   │   │   ├── chat.py           # Mistral AI chatbot proxy
 │   │   │   ├── doctors.py
+│   │   │   ├── patients.py
 │   │   │   └── notifications.py
-│   │   ├── models/        # SQLAlchemy models
-│   │   ├── schemas/       # Pydantic schemas
+│   │   ├── models/               # SQLAlchemy ORM models
+│   │   ├── schemas/              # Pydantic request/response schemas
 │   │   ├── services/
-│   │   │   └── detection.py   # YOLO inference
+│   │   │   └── detection.py      # YOLOv10 inference + mock fallback
 │   │   ├── core/
-│   │   │   ├── config.py      # Settings
-│   │   │   ├── database.py    # DB connection
-│   │   │   └── security.py    # JWT utils
+│   │   │   ├── config.py
+│   │   │   ├── database.py
+│   │   │   └── security.py
 │   │   └── main.py
-│   ├── model.pt           # ← Place your YOLO model here
-│   ├── requirements.txt
-│   └── .env
+│   └── requirements.txt
 │
 └── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   ├── 3d/
-    │   │   │   └── BrainScene.jsx    # Three.js 3D brain
-    │   │   └── shared/
-    │   │       └── DashboardLayout.jsx
-    │   ├── pages/
-    │   │   ├── LandingPage.jsx       # 3D hero landing
-    │   │   ├── AuthPages.jsx         # Login + Register
-    │   │   ├── DoctorDashboard.jsx
-    │   │   ├── PatientDashboard.jsx
-    │   │   └── ScanDetail.jsx
-    │   ├── hooks/
-    │   │   └── useAuth.jsx           # Auth context + API
-    │   └── App.jsx
-    └── package.json
+    └── src/
+        ├── components/
+        │   ├── 3d/BrainScene.jsx
+        │   └── shared/DashboardLayout.jsx
+        ├── pages/
+        │   ├── LandingPage.jsx
+        │   ├── AuthPages.jsx
+        │   ├── DoctorDashboard.jsx
+        │   ├── PatientDashboard.jsx
+        │   ├── ScanDetail.jsx
+        │   └── Analytics.jsx
+        ├── hooks/useAuth.jsx
+        └── App.jsx
 ```
 
 ---
 
-## 🚀 Setup & Run
+## Local Setup
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL running locally
+**Prerequisites:** Python 3.10+, Node.js 18+
 
-### 1. Database Setup
-```bash
-psql -U postgres
-CREATE DATABASE neuroscan_db;
-\q
-```
+### Backend
 
-### 2. Backend Setup
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate       # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Copy your YOLO model
+# Place your YOLOv10 model weights
 cp /path/to/your/model.pt ./model.pt
 
-# Configure environment
-cp .env .env.local   # Edit DATABASE_URL if needed
-
-# Run the server
 uvicorn app.main:app --reload --port 8000
 ```
-Backend runs at: **http://localhost:8000**  
-API Docs: **http://localhost:8000/docs**
 
-### 3. Frontend Setup
+API runs at `http://localhost:8000` · Swagger docs at `/docs`
+
+The database is SQLite and is created automatically on first run — no setup needed.
+
+### Frontend
+
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Run dev server
 npm run dev
 ```
-Frontend runs at: **http://localhost:3000**
+
+Frontend runs at `http://localhost:5173`
+
+Set `VITE_API_URL=http://localhost:8000` in `frontend/.env` if the backend is on a different port.
 
 ---
 
-## 🎯 Features
+## Features
 
 ### Landing Page
-- Interactive 3D brain visualization (Three.js + R3F)
-- Animated neural particle system
-- Feature showcase, how-it-works, tumor type cards
-- Separate CTAs for Doctor and Patient portals
+- Interactive 3D brain model (GLB via Three.js + React Three Fiber)
+- Neural particle animation, scroll-linked transitions
+- Feature cards, how-it-works section, separate CTAs for doctor and patient portals
 
 ### Authentication
-- Separate Doctor and Patient registration flows
-- JWT-based secure auth with 24hr token expiry
-- Role-based route protection
-- Doctor fields: specialization, license, hospital
-- Patient fields: age, gender, blood group, medical history
+- Role-based registration (Doctor / Patient) with separate field sets
+- JWT tokens, 24-hour expiry, protected routes per role
+- Doctor: specialization, license number, hospital affiliation
+- Patient: age, gender, blood group, medical history
 
-### Doctor Dashboard
-- Stats: total patients, scans, tumors detected, pending reviews
-- Recent scans table with detection results
-- Tumor type distribution pie chart
-- Patient roster with quick access
-- Scan detail view with clinical notes + diagnosis form
-- Review submission → auto-notifies patient
+### Patient Portal
+- Drag-and-drop MRI upload (JPEG/PNG)
+- Assign a doctor on upload
+- Scan history with status badges and confidence scores
+- Real-time status updates via WebSocket (falls back to polling)
+- Scan detail view: bounding box overlay on MRI, AI findings, doctor review
 
-### Patient Dashboard
-- Drag-and-drop MRI upload (JPG/PNG)
-- Doctor assignment dropdown
-- Scan history with result badges
-- Real-time status tracking
-- Detailed scan view with AI results + confidence bar
+### Doctor Portal
+- Overview stats: total patients, scans analyzed, detections, pending reviews
+- Full scan queue with filtering; annotate severity (urgent / routine / follow-up)
+- Write clinical notes and submit a diagnosis — patient is notified automatically
+- Patient roster with scan history per patient
+- Analytics dashboard: weekly scan volume, detection type breakdown, aggregate stats
 
-### AI Detection (YOLO)
-- Runs YOLOv8 on uploaded scan in background
-- Detects: **Glioma**, **Meningioma**, **Pituitary tumor**, **No Tumor**
-- Returns bounding boxes, confidence scores, annotated image
-- Falls back to mock detection if model.pt not present (dev mode)
+### AI Detection
+- YOLOv10 runs in a background thread after upload
+- Returns detected class, confidence score, and bounding box coordinates
+- Class names read dynamically from `model.names` — no hardcoded mapping needed
+- If `model.pt` is absent at startup, the service falls back to mock detection so the UI remains fully testable
 
-### Notifications
-- Real-time notification bell with unread count
-- Auto-polls every 15 seconds
-- Triggered on: scan complete, doctor review submitted
-- Type-coded: alert (red), success (green), info (blue)
-
----
-
-## 🧠 YOLO Model Integration
-
-Your existing `model.pt` file needs to be placed in the `backend/` directory.
-
-Expected class IDs (adjust in `app/services/detection.py` if different):
-```python
-class_names = {
-    0: "glioma",
-    1: "meningioma",
-    2: "no_tumor",
-    3: "pituitary"
-}
-```
-
-If Ultralytics is not installed or model.pt is missing, the system uses **mock detection** for development — returning randomized realistic results so the UI is fully functional.
-
----
-
-## 🔒 API Endpoints
-
-### Auth
-- `POST /api/auth/register/doctor` — Doctor signup
-- `POST /api/auth/register/patient` — Patient signup
-- `POST /api/auth/login` — Login (returns JWT)
-- `GET /api/auth/me` — Get current user
-
-### Scans
-- `POST /api/scans/upload` — Upload + auto-detect
-- `GET /api/scans/` — User's own scans
-- `GET /api/scans/all` — All scans (doctor only)
-- `GET /api/scans/stats` — Scan statistics
-- `GET /api/scans/{id}` — Scan detail
-- `PUT /api/scans/{id}/review` — Doctor review (doctor only)
+### AI Chatbot
+- Floating chat widget on all pages
+- Powered by Mistral AI; strictly scoped to medical and platform-related queries
 
 ### Notifications
-- `GET /api/notifications/` — User's notifications
-- `GET /api/notifications/unread-count` — Badge count
-- `PUT /api/notifications/{id}/read` — Mark as read
-- `PUT /api/notifications/mark-all-read` — Mark all read
+- Bell icon with unread count, auto-polled every 15 seconds
+- Events: scan processing complete, doctor review submitted
+- Color-coded by type (alert, success, info)
 
 ---
 
-## 🎓 Project Info
+## API Reference
 
-**Minor Project** — Brain Tumor Detection using Deep Learning  
-Stack: FastAPI + PostgreSQL + React + Three.js + YOLOv8
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register/doctor` | — | Doctor signup |
+| POST | `/api/auth/register/patient` | — | Patient signup |
+| POST | `/api/auth/login` | — | Login, returns JWT |
+| GET | `/api/auth/me` | JWT | Current user |
+| POST | `/api/scans/upload` | Patient | Upload MRI + trigger detection |
+| GET | `/api/scans/` | JWT | User's own scans |
+| GET | `/api/scans/all` | Doctor | All scans |
+| GET | `/api/scans/stats` | Doctor | Aggregate stats |
+| GET | `/api/scans/analytics` | Doctor | Analytics dashboard data |
+| GET | `/api/scans/{id}` | JWT | Scan detail |
+| PUT | `/api/scans/{id}/review` | Doctor | Submit review |
+| WS | `/api/scans/{id}/ws` | — | Real-time scan status |
+| POST | `/api/chat` | JWT | Chatbot query |
+| GET | `/api/notifications/` | JWT | User's notifications |
+| PUT | `/api/notifications/{id}/read` | JWT | Mark as read |
+
+---
+
+## Model
+
+The model weights (`model.pt`) and the 3D brain asset (`brain.glb`) are stored in a separate Hugging Face model repo ([Pulasty/brain-tumor-model](https://huggingface.co/Pulasty/brain-tumor-model)) and are downloaded at Docker build time. They are not checked into this repository.
+
+The model was trained on a 2-class dataset (brain tumor present / not present). Class names are loaded directly from the model file, so swapping in a different checkpoint with more classes requires no code changes.
+
+---
+
+## Deployment
+
+The app is containerised with a multi-stage Dockerfile (Node 20 build → Python 3.11 runtime) and deployed on Hugging Face Spaces. The frontend is built by Vite and served as static files by FastAPI.
+
+---
+
+*Minor Project — Brain Tumor Detection using Deep Learning*
