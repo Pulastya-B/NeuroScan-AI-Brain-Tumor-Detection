@@ -27,3 +27,7 @@ Thumbs.db
 # Root-level GLB duplicates
 /brain.glb
 /mvadapter_model_texture_mesh_fe4f35e67e24a5ff.glb.glb
+
+# Binary ML artifacts — downloaded at Docker build time from Pulasty/brain-tumor-model
+*.pt
+*.glb

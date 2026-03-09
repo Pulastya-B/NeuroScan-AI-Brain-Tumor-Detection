@@ -24,8 +24,23 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY backend/ .
 
-# Copy the YOLO model
-COPY backend/model.pt ./model.pt
+# Download model and brain GLB from dedicated HF model repo at BUILD time.
+# This avoids relying on the fragile LFS/Xet init step in HF Spaces.
+# Docker build has reliable outbound network; init step sometimes has DNS failures.
+RUN python -c "\
+from huggingface_hub import hf_hub_download; \
+import shutil, os; \
+p = hf_hub_download(repo_id='Pulasty/brain-tumor-model', filename='model.pt', repo_type='model'); \
+shutil.copy(p, '/app/model.pt'); \
+print('model.pt downloaded:', os.path.getsize('/app/model.pt'), 'bytes')"
+
+RUN python -c "\
+from huggingface_hub import hf_hub_download; \
+import shutil, os; \
+p = hf_hub_download(repo_id='Pulasty/brain-tumor-model', filename='brain.glb', repo_type='model'); \
+os.makedirs('/app/static', exist_ok=True); \
+shutil.copy(p, '/app/static/brain.glb'); \
+print('brain.glb downloaded:', os.path.getsize('/app/static/brain.glb'), 'bytes')"
 
 # Copy built frontend into /app/static (FastAPI serves from here)
 COPY --from=frontend-build /frontend/dist ./static
